@@ -1,0 +1,238 @@
+import java.util.Random;
+
+public class LSystem {
+	/*Stores the contents of an L-System, which is a set of rules for generating interesting fractal images. 
+	An L-System consists of:
+	A set of symbols, called the alphabet. Eg. {'F','G'}
+	A 'state' which is a string of symbols from the alphabet; Eg. "FFGGFF".
+	A set of rules for replacing individual characters in the state with new strings of characters. Eg. F -> GFG, G -> F.
+	The rules are then applied to the state to iteratively find new states.
+	This class can randomly generate new L-Systems and iterate the stored system.
+	*/
+	private String state; //current state
+	private String[][] rules; //the rules to determine the next iteration of the system. 
+	//First string is a single character, the symbol to be replaced. Second string is the string to replace that character with.
+	private char[] alphabet; //the current symbols used in the L-System
+	private char[] validSymbols = "FQW<>{}[]G+-".toCharArray();
+	private Random r = new Random();
+	
+	public LSystem(String init, char[] inputAlphabet, String[][] inputRules){
+		state = init;
+		alphabet = inputAlphabet;
+		rules = inputRules;
+		
+	}
+	
+	public LSystem(){
+		//if no initial values are specified, randomise the system.
+		randomise();
+	}
+	
+	public String getState(){
+		return state;
+	}
+	
+	public void setState(String input){
+		state = input;
+	}
+	
+	public String[][] getRules(){
+		return rules;
+	}
+	
+	public void setRules(String[][] inputRules){
+		rules = inputRules;
+	}
+	
+	public char[] getAlphabet(){
+	return alphabet;	
+	}
+	
+	public void setAlphabet(char[] inputAlphabet){
+		alphabet = inputAlphabet;
+	}
+	
+	public char[] getValidSymbols(){
+		return validSymbols;
+	}
+	
+	public void setValidSymbols(char[] inputSymbols){
+		validSymbols = inputSymbols;
+	}
+	
+	public void randomise(){
+		randomiseAlphabet();
+		randomiseState();
+		randomiseRules();
+	}
+	
+	public void randomiseAlphabet(){
+		//Picks from several starting alphabets, designed to give interesting results.
+		
+		final int NUM_LSYSTEM_TYPES = 9;
+		int LSystemType = r.nextInt(NUM_LSYSTEM_TYPES);
+		System.out.println(LSystemType);
+		
+		switch(LSystemType){
+		case 0:
+			//Square system.
+			char[] square = {'F','+','-'};
+			alphabet = square;
+			break;
+		case 1:
+			//square with gaps
+			char[] squareGaps = {'F','+','-','W'};
+			alphabet = squareGaps;
+			break;
+		case 2:
+			//curvy and random
+			char[] curvyRandom = {'F','-','+','Q'};
+			alphabet = curvyRandom;
+			break;
+		case 3:
+			//45 degree angles
+			char[] degree = {'F','<','>'};
+			alphabet = degree;
+			break;
+		case 4:
+			//25 degree angular tree
+			char[] degreeAngularTree = {'F','G','[',']'};
+			alphabet = degreeAngularTree;
+			break;
+		case 5:
+			//tree with curves
+			char[] curvyTree = {'F','[',']','Q'};
+			alphabet = curvyTree;
+			break;
+		case 6:
+			//very curvy
+			char[] veryCurvy = {'Q','-','+'};
+			alphabet = veryCurvy;
+			break;
+		case 7:
+			//45 degree angular tree
+			char[] largerDegreeAngularTree = {'F','G','{','}'};
+			alphabet = largerDegreeAngularTree;
+			break;
+		case 8:
+			//everything
+			char[] all = {'F','G','<','>','+','-','[',']','{','}','Q'};
+			alphabet = all;
+			break;
+		}
+		
+	}
+	
+	public void randomiseState(){
+		//pick random integer from 1 to 10, randomise starting state of that length
+		
+		int stateLength = r.nextInt(10) +1;
+		
+		state = "";
+		for(int i = 0; i < stateLength; i++){
+			state = state + getNonBracketCharacter();
+		}
+		
+	}
+	
+	private char getNonBracketCharacter(){
+		//Picks a character from the alphabet that is not a bracket. This is used to ensure brackets are always in pairs.
+		
+		char next = alphabet[r.nextInt(alphabet.length)];
+		while((next == '[')||(next == ']')||(next == '{') || (next == '}')){
+			next = alphabet[r.nextInt(alphabet.length)];
+		}
+		return next;
+	}
+	
+	public void randomiseRules(){
+		//randomly chooses between 2 and 5 rules 
+		
+		int numRules = r.nextInt(4) + 2;
+		String[][] outputRules = new String[numRules][2];
+		
+		for(int currentRule = 0; currentRule < numRules; currentRule++){
+			//pick starting symbol of rule, must not be a bracket.
+			
+			
+			outputRules[currentRule][0] = Character.toString(getNonBracketCharacter());
+			outputRules[currentRule][1] = "";
+			// picks between 1 and 4 symbols to replace the starting symbol with
+			int numSymbols = r.nextInt(4) + 1;
+			
+			outputRules[currentRule][1] = getRule(numSymbols);
+			
+		}
+		
+		rules = outputRules;
+	}
+	
+	public String getRule(int length){
+		//Makes a rule of the specified length using the character in alphabet, ensuring that brackets are always paired up correctly.
+		
+		String output = "";
+		if(length == 0){
+			return "";
+		}else if(length == 1){
+			output = Character.toString(getNonBracketCharacter());
+		}else{
+			for(int i = 0; i < length; i++){
+				char next = alphabet[r.nextInt(alphabet.length)];
+				if ((next == '[')||(next == ']')){
+					output = output + "[" + getRule(length-2) + "]";
+				}else if((next == '{') || (next == '}')){
+					output = output + "{" + getRule(length-2) + "}";
+				}else{
+					output = output + next;
+				}
+			}
+		}
+		
+		return output;
+	}
+	
+	public void iterate(int numIterations){
+		//This applies the rules to the current state. 
+		//If a rule can be applied to a symbol, that symbol is replaced by the contents of the second part of the rule.
+		
+		for(int i = 0; i < numIterations; i++){
+		String finalState = "";
+		for(int currentPos = 0; currentPos < state.length(); currentPos++){
+			//Loop through rules and check if any apply to the current symbol. If so, replace the symbol.
+			
+			char currentChar = state.charAt(currentPos);
+			boolean changed = false;
+			
+			int ruleNum = 0;
+			while((changed == false && (ruleNum < rules.length))){
+			
+				if(currentChar == rules[ruleNum][0].toCharArray()[0]){
+					finalState = finalState + rules[ruleNum][1];
+					changed = true;
+				}
+			ruleNum++;
+			}
+			
+			if(changed == false){
+				finalState = finalState + currentChar;
+			}
+		}
+		
+		state = finalState;
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
