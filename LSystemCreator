@@ -1,0 +1,243 @@
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.geom.QuadCurve2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.util.Random;
+
+import javax.imageio.ImageIO;
+
+public class LSystemCreator {
+	//This class creates L-Systems and draws them to images which are saved to the working directory\Pictures. 
+	//The L-System is interpreted as a set of instructions for a "turtle", which draws lines on the image.
+	
+	LSystem l = new LSystem();
+	int stepSize = 60; //size of the steps that the turtle takes.
+	String init = "F+-"; 
+	char[] inputAlphabet = {'F','+','-','W','<','>','[',']','G'};
+	String[][] inputRules = {{"F","F+F-F-F+F"}};
+	int iterNum = 6;
+	static int fileNum = new File("Pictures\\").list().length;
+	Random r = new Random();
+	
+	public boolean drawLSystem(){
+		try {
+			BufferedImage img = new BufferedImage(4000,4000, BufferedImage.TYPE_INT_ARGB);
+			
+			Graphics2D g2d = img.createGraphics();
+			
+			g2d.setColor(new Color(0, 150, 0));
+			g2d.setStroke(new BasicStroke(3));
+			
+			
+			//starting position of the turtle:
+			int turtleX = 2000;
+			int turtleY = 2000;
+			
+			//angle records the direction the turtle is currently facing in degrees.
+			int angle;
+			
+			//these record the boundaries of the drawing.
+			int minX = turtleX;
+			int maxX = turtleX;
+			int minY = turtleY;
+			int maxY = turtleY;
+			
+			
+			//randomly picks a starting angle. Biased toward cardinal directions.
+			if(Math.random() > 0.5){
+				angle = r.nextInt(4) * 90;
+			}else{
+				angle = r.nextInt(360);
+			}
+			
+			
+			
+			String state = l.getState();
+			InstructionStack stack = new InstructionStack();
+			
+			for(int currentPos = 0; currentPos < state.length(); currentPos++){
+				//goes through the characters of the state and draws the corresponding line.
+				
+				char current = state.charAt(currentPos);
+				int endX;
+				int endY;
+				int ctrlX;
+				int ctrlY;
+				int[] prev;
+				
+				
+				switch(current){
+				case 'F':
+					//straight line
+					endX = (int) (turtleX + stepSize*Math.sin((Math.PI*angle)/180));
+					endY = (int)(turtleY + stepSize*Math.cos((Math.PI*angle)/180));
+					
+					g2d.drawLine(turtleX, turtleY, endX, endY);
+					
+					turtleX = endX;
+					turtleY = endY;
+					break;
+				case 'G':
+					//straight line
+					endX = (int) (turtleX + stepSize*Math.sin((Math.PI*angle)/180));
+					endY = (int)(turtleY + stepSize*Math.cos((Math.PI*angle)/180));
+					
+					g2d.drawLine(turtleX, turtleY, endX, endY);
+					
+					turtleX = endX;
+					turtleY = endY;
+					break;
+				case '+':
+					//turn 90 degrees CCW
+					angle = (angle + 90)%360;
+					break;
+				case '-':
+					//turn 90 degrees CW
+					angle = (angle - 90)%360;
+					break;
+				case '<':
+					//turn 45 degrees CCW
+					angle = (angle + 45)%360;
+					break;
+				case '>':
+					//turn 45 degrees CW
+					angle = (angle - 45)%360;
+					break;
+				case 'W':
+					//walks the turtle forward without drawing a line
+					endX = (int) (turtleX + stepSize*Math.sin((Math.PI*angle)/180));
+					endY = (int)(turtleY + stepSize*Math.cos((Math.PI*angle)/180));
+					
+					turtleX = endX;
+					turtleY = endY;
+					break;
+				case '[':
+					//Used to create branches. Pushes the current turtle position onto the stack, then turns 25 degrees CW or CCW randomly.
+					stack.push(turtleX, turtleY, angle);
+					if(Math.random() > 0.5){
+						angle = (angle + 25)%360;
+					}else{
+						angle = (angle - 25)%360;
+					}
+					break;
+				case ']':
+					//End of a branch. Pops the turtle position at the start of the branch back off the stack.
+					prev = stack.pop();
+					turtleX = prev[0];
+					turtleY = prev[1];
+					angle = prev[2];
+					break;
+				case '{':
+					//Used to create branches. Pushes the current turtle position onto the stack, then turns 90 degrees CCW.
+					stack.push(turtleX, turtleY, angle);
+					angle = (angle + 90)%360;
+					break;
+				case '}':
+					//End of a branch. Pops the turtle position at the start of the branch back off the stack.
+					prev = stack.pop();
+					turtleX = prev[0];
+					turtleY = prev[1];
+					angle = prev[2];
+					break;
+				case 'Q':
+					//Makes a curved line from the start to a point 1 step ahead and to the left/right of the turtle.
+					ctrlX = (int) (turtleX + stepSize*Math.sin((Math.PI*angle)/180));
+					ctrlY = (int)(turtleY + stepSize*Math.cos((Math.PI*angle)/180));
+					
+					if(Math.random() > 0.5){
+					angle = (angle + 90)%360;
+					}else{
+						angle = (angle - 90)%360;
+					}
+					endX = (int) (ctrlX + stepSize*Math.sin((Math.PI*angle)/180));
+					endY = (int)(ctrlY + stepSize*Math.cos((Math.PI*angle)/180));
+					
+					QuadCurve2D q = new QuadCurve2D.Float();
+					
+					q.setCurve(turtleX, turtleY, ctrlX, ctrlY, endX, endY);
+					g2d.draw(q);
+					
+					turtleX = endX;
+					turtleY = endY;
+					break;
+				default:
+					break;
+				
+			}
+			
+			//Checks if the turtle has travelled further than it had before.
+			minX = Math.min(minX, turtleX);
+			maxX = Math.max(maxX, turtleX);
+			minY = Math.min(minY, turtleY);
+			maxY = Math.max(maxY, turtleY);
+			
+			
+			}
+			
+			if((maxX - minX > 100) && (maxY - minY > 100)){
+				//Only writes an image if the turtle covered at least 100 pixels horizontally and vertically, to avoid boring pictures.
+				
+				fileNum++;
+				ImageIO.write(img, "png", new File("Pictures\\LSystem" + fileNum + ".png"));
+			
+				System.out.println("File written.");
+				return true;
+			}else{
+				return false;
+			}
+			} catch (IOException e) {
+				
+				e.printStackTrace();
+				return false;
+			}
+	}
+	
+	public void randomiseSystem(){
+		l.randomise();
+		l.iterate(iterNum);
+		System.out.println(l.getState());
+	}
+}
+
+class InstructionStack{
+	//the stack used to store the turtle's position/direction when branching.
+	
+	int[][] stack = new int[20][3];
+	int pos;
+	
+	InstructionStack(){
+		pos = 0;
+	}
+	
+	public void push(int x, int y, int angle){
+		if(pos == stack.length){
+			int[][] newStack = new int[stack.length * 2][3];
+			for(int i = 0; i < stack.length; i++){
+				newStack[i][0] = stack[i][0];
+				newStack[i][1] = stack[i][1];
+				newStack[i][2] = stack[i][2];
+			}
+			stack = newStack;
+		}
+		
+		
+		stack[pos][0] = x;
+		stack[pos][1] = y;
+		stack[pos][2] = angle;
+		pos++;
+	}
+	
+	public int[] pop(){
+		if(pos> 0){
+			pos--;
+			int[] output;
+			output = stack[pos];
+			return output;
+		}else{
+			return null;
+		}
+	}
+}
