@@ -1,0 +1,27 @@
+public class LSystemMain {
+
+	public static void main(String[] args) {
+		//Creates an LSystemCreator that saves 20 images of LSystems to the working directory\Pictures.
+		
+		
+		LSystemCreator l = new LSystemCreator();
+		int i = 0;
+		while(i < 20){
+		
+		l.randomiseSystem();
+		if(l.drawLSystem()){i++;} ;
+		}
+	}
+	
+	
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+}
